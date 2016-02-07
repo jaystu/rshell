@@ -7,7 +7,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <netdb.h>
+#include <pwd.h>
+#include <sys/socket.h>
+#include <boost/algorithm/string.hpp>
 using namespace std;
+using namespace boost::algorithm;
 
 
 class Base {
@@ -80,46 +85,111 @@ class ConnectOr : public Connector {
                         return rt->evaluate();
         	}       
 };
-//class AlwaysRuns : public Command {
-//	public:
-//		AlwaysRuns() : Command(){};
-//		bool evaluate(){cout << "ran successfully" << endl; return true;}
-//};
-//class NeverRuns : public Command {
-//	public:
-//		NeverRuns() : Command(){};
-//       	bool evaluate(){cout << "run unsuccessful" << endl; return false;}
-//};
+//function to format string to pass into execvp()
+vector<string> separateWords(string s) {
+	char charCom[s.size()+1];
+        strcpy(charCom,s.c_str());
+        charCom[s.size()+1] = '\0';
+        char * cutter;
+        cutter = strtok(charCom, " ");
+        char* args[s.size()];
+        vector<string> argList;
+        while (cutter != NULL) {
+		string word(cutter);
+		trim(word);
+		argList.push_back(word);
+                cutter = strtok(NULL, " ");
+        }
+	return argList;
+}
 int main(){
-	//very first command to be entered runs successfully
-	//bool c0 = true;
-	//Base* c1 = new Command(new AlwaysRuns);
-	//Base* c2 = new Command(new AlwaysRuns);
-	//Base* c3 = new Command(new AlwaysRuns);
-	
-	//Base* c0andc1 = new ConnectAnd(c0, c1);
-	//Base* c0orc2 = new ConnectOr(c0, c2);
-	//Base* c0semc3 = new ConnectSem(c0, c3); 	
-	
-	//cout << "c1...";
-	//c0andc1->evaluate();
-	//cout << "c2...";
-	//c0orc2->evaluate();
-	//cout << "c3...";
-	//c0semc3->evaluate();
-	//char * argument[] = {"ls", NULL};
-	//Base* test = new Command(argument);
-	//test->evaluate();
-	
 
-	vector<string> args {"ls"};
-	bool c0 = true;
-	Base* c1 = new Command(args);
-	Base* c0andc1 = new ConnectAnd(c0, c1);
-	c0andc1->evaluate();
+	//get extra info for prompt
 
+	/*string login = getlogin();
+ 	char hostname[100];
+ 	int temp = gethostname(hostname, 100);
+ 	cout << "[" << login << " " << hostname << "] $";*/
+
+	//begin taking commands
+	string commandEntered;
+	while (commandEntered != "exit") {
+		cout << "$ ";
+		getline(cin, commandEntered); 
 	
+		//fills vector of connectors so we can refer to them when instantiating connector classes
+		vector<string> connectorVector;
+		for(unsigned int i = 0; i < commandEntered.length(); i++) {
+    			if (commandEntered[i] == '#') {
+				break;
+			}
+			else if (commandEntered[i] == '&') {
+				if (commandEntered[i + 1] == '&') {
+					connectorVector.push_back("&&");		
+				} 
+			}
+			else if (commandEntered[i] == '|') {
+				if (commandEntered[i + 1] == '|') {
+					connectorVector.push_back("||");
+				}
+			}
+			else if (commandEntered[i] == ';') {
+				connectorVector.push_back(";");
+			}
+		}
 
+		//user input string
+	
+		char charCom[commandEntered.size()+1];
+		
+		//convert string to char array
+	
+		strcpy(charCom,commandEntered.c_str());
+		
+		charCom[commandEntered.size()+1] = '\0';
+	
+	
+		char * cutter;
 
+		//parse string
+
+		cutter = strtok(charCom, "||&&;");
+		
+		char* args[commandEntered.size()];
+		
+		vector<string> mycommands;
+	
+		//creates single commands and adds them to vector as strings
+
+		while(cutter!=NULL)
+		{		
+			string singlecommand(cutter);
+			trim(singlecommand);
+			mycommands.push_back(singlecommand);
+			cutter = strtok(NULL, "|&;");	
+		}
+		
+		//get boolean value of first command
+		vector<string> firstCommand = separateWords(mycommands.at(0));
+		Base* first = new Command(firstCommand);
+                bool c0 = first->evaluate();	
+		
+		//instantiates connectors (filters subsequent commands based on successful first command run) 	
+		for (int i = 0; i < connectorVector.size(); i ++) {
+			Base* nextCommand;
+			vector<string> argList = separateWords(mycommands.at(i + 1));
+			if (connectorVector.at(i) == "&&") {
+				nextCommand = new ConnectAnd(c0, new Command(argList));
+			}
+			else if (connectorVector.at(i) == "||") {
+				nextCommand = new ConnectOr(c0, new Command(argList));
+			}
+			else if (connectorVector.at(i) == ";") {
+				nextCommand = new ConnectSem(c0, new Command(argList));						
+			}
+			nextCommand->evaluate();
+		}
+	}
+	
         return 0;
 }
