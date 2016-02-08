@@ -11,14 +11,28 @@ int main()
 	getline(cin, commandEntered);                                       
 	
 	//user input string
+
+
+	//if #(comment) is detected, it will ignore everything that is commented
+
+	std::size_t found = commandEntered.find('#');
 	
-	char charCom[commandEntered.size()+1];
+	if(found != std::string::npos)
+	{
+		commandEntered = commandEntered.substr(0,commandEntered.find("#"));
+	
+	}
+	
+
+
+	int mysize = commandEntered.size() +1;	
+	char* charCom = new char[mysize];
 	
 	//convert string to char array
 	
 	strcpy(charCom,commandEntered.c_str());
 	
-	charCom[commandEntered.size()+1] = '\0';
+	charCom[mysize] = '\0';
 
 
 	char * cutter;
@@ -27,7 +41,7 @@ int main()
 	
 	cutter = strtok(charCom, "||&&;");
 	
-	char* args[commandEntered.size()];
+	char* args = new char[commandEntered.size()];
 	
 	vector<string> mycommands;
 
