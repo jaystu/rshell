@@ -36,6 +36,9 @@ class Command : public Base {
 		//constructor takes in unformatted vector that holds command and arguments
 		Command(vector<string> a){args = a;}
 		bool evaluate() {
+			if (args[0] == "exit") {
+				exit(0);
+			}
 			//formatting the vector
 			vector<char *> a2;
 			for (int i = 0; i < args.size(); i++) {
@@ -52,13 +55,12 @@ class Command : public Base {
 				exit(1);
 			}
 			else if (pid == 0) {
-				cout << "in child" << endl;
 				//can now pass into execvp() with some final touches to the formatting
 				execvp(const_cast<char *>(array[0]), array);
 				return true;
 			}
 			else if (pid > 0) {
-				cout << "in parent, waiting" << endl;
+				//wait until child finishes or else bad things will happen
 				wait(NULL);	
 			}
 			return true;			
@@ -117,61 +119,72 @@ vector<string> split(string s, const char* delim) {
 int main(){
 
 	//begin taking commands
-	string commandEntered;
-	while (commandEntered != "exit") {
+	string initCommand;
+	
+	//infinitely loop unless exit is found (which returns 0)
+	while (1) {
 		//get extra info for prompt (extra credit)
 		string login = getlogin();
         	char hostname[100];
         	int temp = gethostname(hostname, 100);
-        	cout << "[" << login << " " << hostname << "] $";
-
-		getline(cin, commandEntered); 
-		if (commandEntered == "exit") {break;}
-	
-		//fills vector of connectors so we can refer to them when instantiating connector classes
-		vector<string> connectorVector;
-		for(unsigned int i = 0; i < commandEntered.length(); i++) {
-    			if (commandEntered[i] == '#') {
-				break;
-			}
-			else if (commandEntered[i] == '&') {
-				if (commandEntered[i + 1] == '&') {
-					connectorVector.push_back("&&");		
-				} 
-			}
-			else if (commandEntered[i] == '|') {
-				if (commandEntered[i + 1] == '|') {
-					connectorVector.push_back("||");
+        	cout << "[" << login << " " << hostname << "] $ ";
+		
+		getline(cin, initCommand);
+		trim(initCommand);
+		bool noCommand;
+		if (initCommand == "") {
+			noCommand = true;
+		}
+		else {
+			noCommand = false;	
+		}
+		while (noCommand == false) {
+			//if there exists comment, delete it
+			string commandEntered = initCommand.substr(0, initCommand.find("#", 0));		
+			//fills vector of connectors so we can refer to them when instantiating connector classes
+			vector<string> connectorVector;
+			for(unsigned int i = 0; i < commandEntered.length(); i++) {
+				if (commandEntered[i] == '&') {
+					if (commandEntered[i + 1] == '&') {
+						connectorVector.push_back("&&");		
+					} 
+				}
+				else if (commandEntered[i] == '|') {
+					if (commandEntered[i + 1] == '|') {
+						connectorVector.push_back("||");
+					}
+				}
+				else if (commandEntered[i] == ';') {
+					connectorVector.push_back(";");
 				}
 			}
-			else if (commandEntered[i] == ';') {
-				connectorVector.push_back(";");
+			//splits statement with multiple commands into seperate commands
+			vector<string> mycommands = split(commandEntered, "||&&;");
+			
+			//run first command and get  boolean value
+			vector<string> firstCommand = split(mycommands.at(0), " ");
+			Base* first = new Command(firstCommand);
+			bool c0 = first->evaluate();	
+			
+			//instantiates connectors (filters subsequent commands based on successful first command run) 	
+			for (int i = 0; i < connectorVector.size(); i ++) {
+				Base* nextCommand;
+				//formats single command to be passed into execvp() function
+				vector<string> argList = split(mycommands.at(i + 1), " ");
+			
+				if (connectorVector.at(i) == "&&") {
+					nextCommand = new ConnectAnd(c0, new Command(argList));
+				}
+				else if (connectorVector.at(i) == "||") {
+					nextCommand = new ConnectOr(c0, new Command(argList));
+				}
+				else if (connectorVector.at(i) == ";") {
+					nextCommand = new ConnectSem(c0, new Command(argList));						
+				}
+				nextCommand->evaluate();
 			}
-		}
-		//splits statement with multiple commands into seperate commands
-		vector<string> mycommands = split(commandEntered, "||&&;");
-		
-		//run first command and get  boolean value
-		vector<string> firstCommand = split(mycommands.at(0), " ");
-		Base* first = new Command(firstCommand);
-                bool c0 = first->evaluate();	
-		
-		//instantiates connectors (filters subsequent commands based on successful first command run) 	
-		for (int i = 0; i < connectorVector.size(); i ++) {
-			Base* nextCommand;
-			//formats single command to be passed into execvp() function
-			vector<string> argList = split(mycommands.at(i + 1), " ");
-
-			if (connectorVector.at(i) == "&&") {
-				nextCommand = new ConnectAnd(c0, new Command(argList));
-			}
-			else if (connectorVector.at(i) == "||") {
-				nextCommand = new ConnectOr(c0, new Command(argList));
-			}
-			else if (connectorVector.at(i) == ";") {
-				nextCommand = new ConnectSem(c0, new Command(argList));						
-			}
-			nextCommand->evaluate();
+			//ready for next command
+			noCommand = true;
 		}
 	}
 	
