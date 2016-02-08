@@ -14,12 +14,13 @@
 using namespace std;
 using namespace boost::algorithm;
 
-
 class Base {
     public:
         Base(){};
         virtual bool evaluate() = 0;
 };
+
+//super to "&&" "||" and ";" connectors
 class Connector : public Base {
         public:
                 Connector() : Base (){};
@@ -27,17 +28,23 @@ class Connector : public Base {
                 bool firstRun;
                 Base* rt;
 };
+//Command will serve as our leaf node in our composite pattern design
 class Command : public Base {
         private:
 		vector<string> args;
         public:
+		//constructor takes in unformatted vector that holds command and arguments
 		Command(vector<string> a){args = a;}
 		bool evaluate() {
+			//formatting the vector
 			vector<char *> a2;
 			for (int i = 0; i < args.size(); i++) {
 				a2.push_back(const_cast<char *>(args.at(i).c_str()));
 			}
+			a2.push_back('\0');
 			char** array = &a2[0];
+
+			//fork so multiple processes can happen at once
 			pid_t pid = fork();
 			if (pid < 0) {
 				perror("fork failed");
@@ -46,6 +53,7 @@ class Command : public Base {
 			}
 			else if (pid == 0) {
 				cout << "in child" << endl;
+				//can now pass into execvp() with some final touches to the formatting
 				execvp(const_cast<char *>(array[0]), array);
 				return true;
 			}
@@ -97,7 +105,7 @@ vector<string> split(string s, const char* delim) {
         cutter = strtok(charCom, delim);
         char* args[s.size()];
         vector<string> subStrings;
-	//creates single commands and adds them to vector as strings
+	//creates substrings and puts them in vector
         while (cutter != NULL) {
 		string word(cutter);
 		trim(word);
@@ -108,18 +116,17 @@ vector<string> split(string s, const char* delim) {
 }
 int main(){
 
-	//get extra info for prompt
-
-	/*string login = getlogin();
- 	char hostname[100];
- 	int temp = gethostname(hostname, 100);
- 	cout << "[" << login << " " << hostname << "] $";*/
-
 	//begin taking commands
 	string commandEntered;
 	while (commandEntered != "exit") {
-		cout << "$ ";
+		//get extra info for prompt (extra credit)
+		string login = getlogin();
+        	char hostname[100];
+        	int temp = gethostname(hostname, 100);
+        	cout << "[" << login << " " << hostname << "] $";
+
 		getline(cin, commandEntered); 
+		if (commandEntered == "exit") {break;}
 	
 		//fills vector of connectors so we can refer to them when instantiating connector classes
 		vector<string> connectorVector;
@@ -144,7 +151,7 @@ int main(){
 		//splits statement with multiple commands into seperate commands
 		vector<string> mycommands = split(commandEntered, "||&&;");
 		
-		//get boolean value of first command
+		//run first command and get  boolean value
 		vector<string> firstCommand = split(mycommands.at(0), " ");
 		Base* first = new Command(firstCommand);
                 bool c0 = first->evaluate();	
