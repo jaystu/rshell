@@ -85,22 +85,26 @@ class ConnectOr : public Connector {
                         return rt->evaluate();
         	}       
 };
-//function to format string to pass into execvp()
-vector<string> separateWords(string s) {
+//function that splits string into vector of substrings
+vector<string> split(string s, const char* delim) {
+	//s is initial string
 	char charCom[s.size()+1];
+	//convert string to char array
         strcpy(charCom,s.c_str());
         charCom[s.size()+1] = '\0';
         char * cutter;
-        cutter = strtok(charCom, " ");
+	//parse string
+        cutter = strtok(charCom, delim);
         char* args[s.size()];
-        vector<string> argList;
+        vector<string> subStrings;
+	//creates single commands and adds them to vector as strings
         while (cutter != NULL) {
 		string word(cutter);
 		trim(word);
-		argList.push_back(word);
-                cutter = strtok(NULL, " ");
+		subStrings.push_back(word);
+                cutter = strtok(NULL, delim);
         }
-	return argList;
+	return subStrings;
 }
 int main(){
 
@@ -137,47 +141,20 @@ int main(){
 				connectorVector.push_back(";");
 			}
 		}
-
-		//user input string
-	
-		char charCom[commandEntered.size()+1];
-		
-		//convert string to char array
-	
-		strcpy(charCom,commandEntered.c_str());
-		
-		charCom[commandEntered.size()+1] = '\0';
-	
-	
-		char * cutter;
-
-		//parse string
-
-		cutter = strtok(charCom, "||&&;");
-		
-		char* args[commandEntered.size()];
-		
-		vector<string> mycommands;
-	
-		//creates single commands and adds them to vector as strings
-
-		while(cutter!=NULL)
-		{		
-			string singlecommand(cutter);
-			trim(singlecommand);
-			mycommands.push_back(singlecommand);
-			cutter = strtok(NULL, "|&;");	
-		}
+		//splits statement with multiple commands into seperate commands
+		vector<string> mycommands = split(commandEntered, "||&&;");
 		
 		//get boolean value of first command
-		vector<string> firstCommand = separateWords(mycommands.at(0));
+		vector<string> firstCommand = split(mycommands.at(0), " ");
 		Base* first = new Command(firstCommand);
                 bool c0 = first->evaluate();	
 		
 		//instantiates connectors (filters subsequent commands based on successful first command run) 	
 		for (int i = 0; i < connectorVector.size(); i ++) {
 			Base* nextCommand;
-			vector<string> argList = separateWords(mycommands.at(i + 1));
+			//formats single command to be passed into execvp() function
+			vector<string> argList = split(mycommands.at(i + 1), " ");
+
 			if (connectorVector.at(i) == "&&") {
 				nextCommand = new ConnectAnd(c0, new Command(argList));
 			}
