@@ -24,6 +24,7 @@ class Base {
 class Connector : public Base {
         public:
                 Connector() : Base (){};
+		~Connector();
         protected:
                 bool firstRun;
                 Base* rt;
@@ -35,9 +36,11 @@ class Command : public Base {
         public:
 		//constructor takes in unformatted vector that holds command and arguments
 		Command(vector<string> a){args = a;}
+		~Command();
 		bool evaluate() {
 			if (args[0] == "exit") {
 				exit(0);
+				cout << "errrrrrrror";
 			}
 			//formatting the vector
 			vector<char *> a2;
@@ -48,27 +51,49 @@ class Command : public Base {
 			char** array = &a2[0];
 
 			//fork so multiple processes can happen at once
+			int status;
 			pid_t pid = fork();
 			if (pid < 0) {
 				perror("fork failed");
-				return false;
 				exit(1);
 			}
 			else if (pid == 0) {
 				//can now pass into execvp() with some final touches to the formatting
 				execvp(const_cast<char *>(array[0]), array);
-				return true;
+				//if reaches this part then error
+				exit(127);
 			}
 			else if (pid > 0) {
 				//wait until child finishes or else bad things will happen
-				wait(NULL);	
+				//waitpid(pid, &status, 0);
+				wait(&status);
+				if(WIFEXITED(status)){
+    					if(WEXITSTATUS(status) == 0){
+					//program succeeded
+					cout << "program succeeded" << endl;
+					return true;
+					}
+					else {
+					//program failed but exited normally
+					cout << "program failed but exited normally" << endl;
+					return false;
+						
+					}
+				}
+				else{
+				//program exited abnormally
+				cout << "child exited abnormally" << endl;
+				return false;
+				}
 			}
-			return true;			
+			
+			return false;			
 		} 
 };
 class ConnectAnd : public Connector {
         public:
                 ConnectAnd(bool f, Base* r) {firstRun = f; rt = r;}
+		~ConnectAnd();
                 //attempt to run right child only if first command runs 
 		bool evaluate(){
 			if (firstRun){
@@ -80,7 +105,8 @@ class ConnectAnd : public Connector {
 class ConnectOr : public Connector {
         public:
                 ConnectOr(bool f, Base* r) {firstRun = f; rt = r;}
-                //attempt to run right child only if first command fails to run
+               	~ConnectOr();
+		//attempt to run right child only if first command fails to run
 		bool evaluate(){
 			if(!firstRun) {
 				return rt->evaluate();
@@ -90,7 +116,8 @@ class ConnectOr : public Connector {
 };class ConnectSem : public Connector {
         public:
                 ConnectSem(bool f, Base* r) {firstRun = f; rt = r;}
-                //always attempt to run next right child
+         	~ConnectSem();
+	        //always attempt to run next right child
 		bool evaluate(){
                         return rt->evaluate();
         	}       
@@ -160,18 +187,16 @@ int main(){
 			}
 			//splits statement with multiple commands into seperate commands
 			vector<string> mycommands = split(commandEntered, "||&&;");
-			
 			//run first command and get  boolean value
 			vector<string> firstCommand = split(mycommands.at(0), " ");
 			Base* first = new Command(firstCommand);
-			bool c0 = first->evaluate();	
-			
+			bool c0 = first->evaluate();
+
 			//instantiates connectors (filters subsequent commands based on successful first command run) 	
 			for (int i = 0; i < connectorVector.size(); i ++) {
 				Base* nextCommand;
 				//formats single command to be passed into execvp() function
 				vector<string> argList = split(mycommands.at(i + 1), " ");
-			
 				if (connectorVector.at(i) == "&&") {
 					nextCommand = new ConnectAnd(c0, new Command(argList));
 				}
