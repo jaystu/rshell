@@ -40,7 +40,6 @@ class Command : public Base {
 		bool evaluate() {
 			if (args[0] == "exit") {
 				exit(0);
-				cout << "errrrrrrror";
 			}
 			//formatting the vector
 			vector<char *> a2;
@@ -70,19 +69,16 @@ class Command : public Base {
 				if(WIFEXITED(status)){
     					if(WEXITSTATUS(status) == 0){
 					//program succeeded
-					cout << "program succeeded" << endl;
 					return true;
 					}
 					else {
 					//program failed but exited normally
-					cout << "program failed but exited normally" << endl;
 					return false;
 						
 					}
 				}
 				else{
 				//program exited abnormally
-				cout << "child exited abnormally" << endl;
 				return false;
 				}
 			}
@@ -167,7 +163,7 @@ int main(){
 		}
 		while (noCommand == false) {
 			//if there exists comment, delete it
-			string commandEntered = initCommand.substr(0, initCommand.find("#", 0));		
+			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));		
 			//fills vector of connectors so we can refer to them when instantiating connector classes
 			vector<string> connectorVector;
 			for(unsigned int i = 0; i < commandEntered.length(); i++) {
