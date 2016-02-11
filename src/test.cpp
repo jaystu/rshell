@@ -7,53 +7,89 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <netdb.h>
+#include <pwd.h>
+#include <sys/socket.h>
+#include <boost/algorithm/string.hpp>
 using namespace std;
-
+using namespace boost::algorithm;
 
 class Base {
     public:
         Base(){};
         virtual bool evaluate() = 0;
 };
+
+//super to "&&" "||" and ";" connectors
 class Connector : public Base {
         public:
                 Connector() : Base (){};
+		~Connector();
         protected:
                 bool firstRun;
                 Base* rt;
 };
+//Command will serve as our leaf node in our composite pattern design
 class Command : public Base {
         private:
 		vector<string> args;
         public:
+		//constructor takes in unformatted vector that holds command and arguments
 		Command(vector<string> a){args = a;}
+		~Command();
 		bool evaluate() {
+			if (args[0] == "exit") {
+				exit(0);
+			}
+			//formatting the vector
 			vector<char *> a2;
 			for (int i = 0; i < args.size(); i++) {
 				a2.push_back(const_cast<char *>(args.at(i).c_str()));
 			}
+			a2.push_back('\0');
 			char** array = &a2[0];
+
+			//fork so multiple processes can happen at once
+			int status;
 			pid_t pid = fork();
 			if (pid < 0) {
 				perror("fork failed");
-				return false;
 				exit(1);
 			}
 			else if (pid == 0) {
-				cout << "in child" << endl;
+				//can now pass into execvp() with some final touches to the formatting
 				execvp(const_cast<char *>(array[0]), array);
-				return true;
+				//if reaches this part then error
+				exit(127);
 			}
 			else if (pid > 0) {
-				cout << "in parent, waiting" << endl;
-				wait(NULL);	
+				//wait until child finishes or else bad things will happen
+				//waitpid(pid, &status, 0);
+				wait(&status);
+				if(WIFEXITED(status)){
+    					if(WEXITSTATUS(status) == 0){
+					//program succeeded
+					return true;
+					}
+					else {
+					//program failed but exited normally
+					return false;
+						
+					}
+				}
+				else{
+				//program exited abnormally
+				return false;
+				}
 			}
-			return true;			
+			
+			return false;			
 		} 
 };
 class ConnectAnd : public Connector {
         public:
                 ConnectAnd(bool f, Base* r) {firstRun = f; rt = r;}
+		~ConnectAnd();
                 //attempt to run right child only if first command runs 
 		bool evaluate(){
 			if (firstRun){
@@ -65,7 +101,8 @@ class ConnectAnd : public Connector {
 class ConnectOr : public Connector {
         public:
                 ConnectOr(bool f, Base* r) {firstRun = f; rt = r;}
-                //attempt to run right child only if first command fails to run
+               	~ConnectOr();
+		//attempt to run right child only if first command fails to run
 		bool evaluate(){
 			if(!firstRun) {
 				return rt->evaluate();
@@ -75,51 +112,102 @@ class ConnectOr : public Connector {
 };class ConnectSem : public Connector {
         public:
                 ConnectSem(bool f, Base* r) {firstRun = f; rt = r;}
-                //always attempt to run next right child
+         	~ConnectSem();
+	        //always attempt to run next right child
 		bool evaluate(){
                         return rt->evaluate();
         	}       
 };
-//class AlwaysRuns : public Command {
-//	public:
-//		AlwaysRuns() : Command(){};
-//		bool evaluate(){cout << "ran successfully" << endl; return true;}
-//};
-//class NeverRuns : public Command {
-//	public:
-//		NeverRuns() : Command(){};
-//       	bool evaluate(){cout << "run unsuccessful" << endl; return false;}
-//};
+//function that splits string into vector of substrings
+vector<string> split(string s, const char* delim) {
+	//s is initial string
+	char charCom[s.size()+1];
+	//convert string to char array
+        strcpy(charCom,s.c_str());
+        charCom[s.size()+1] = '\0';
+        char * cutter;
+	//parse string
+        cutter = strtok(charCom, delim);
+        char* args[s.size()];
+        vector<string> subStrings;
+	//creates substrings and puts them in vector
+        while (cutter != NULL) {
+		string word(cutter);
+		trim(word);
+		subStrings.push_back(word);
+                cutter = strtok(NULL, delim);
+        }
+	return subStrings;
+}
 int main(){
-	//very first command to be entered runs successfully
-	//bool c0 = true;
-	//Base* c1 = new Command(new AlwaysRuns);
-	//Base* c2 = new Command(new AlwaysRuns);
-	//Base* c3 = new Command(new AlwaysRuns);
-	
-	//Base* c0andc1 = new ConnectAnd(c0, c1);
-	//Base* c0orc2 = new ConnectOr(c0, c2);
-	//Base* c0semc3 = new ConnectSem(c0, c3); 	
-	
-	//cout << "c1...";
-	//c0andc1->evaluate();
-	//cout << "c2...";
-	//c0orc2->evaluate();
-	//cout << "c3...";
-	//c0semc3->evaluate();
-	//char * argument[] = {"ls", NULL};
-	//Base* test = new Command(argument);
-	//test->evaluate();
-	
 
-	vector<string> args {"ls"};
-	bool c0 = true;
-	Base* c1 = new Command(args);
-	Base* c0andc1 = new ConnectAnd(c0, c1);
-	c0andc1->evaluate();
-
+	//begin taking commands
+	string initCommand;
 	
+	//infinitely loop unless exit is found (which returns 0)
+	while (1) {
+		//get extra info for prompt (extra credit)
+		string login = getlogin();
+        	char hostname[100];
+        	int temp = gethostname(hostname, 100);
+        	cout << "[" << login << " " << hostname << "] $ ";
+		
+		getline(cin, initCommand);
+		trim(initCommand);
+		bool noCommand;
+		if (initCommand == "") {
+			noCommand = true;
+		}
+		else {
+			noCommand = false;	
+		}
+		while (noCommand == false) {
+			//if there exists comment, delete it
+			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));		
+			//fills vector of connectors so we can refer to them when instantiating connector classes
+			vector<string> connectorVector;
+			for(unsigned int i = 0; i < commandEntered.length(); i++) {
+				if (commandEntered[i] == '&') {
+					if (commandEntered[i + 1] == '&') {
+						connectorVector.push_back("&&");		
+					} 
+				}
+				else if (commandEntered[i] == '|') {
+					if (commandEntered[i + 1] == '|') {
+						connectorVector.push_back("||");
+					}
+				}
+				else if (commandEntered[i] == ';') {
+					connectorVector.push_back(";");
+				}
+			}
+			//splits statement with multiple commands into seperate commands
+			vector<string> mycommands = split(commandEntered, "||&&;");
+			//run first command and get  boolean value
+			vector<string> firstCommand = split(mycommands.at(0), " ");
+			Base* first = new Command(firstCommand);
+			bool c0 = first->evaluate();
 
-
+			//instantiates connectors (filters subsequent commands based on successful first command run) 	
+			for (int i = 0; i < connectorVector.size(); i ++) {
+				Base* nextCommand;
+				//formats single command to be passed into execvp() function
+				vector<string> argList = split(mycommands.at(i + 1), " ");
+				if (connectorVector.at(i) == "&&") {
+					nextCommand = new ConnectAnd(c0, new Command(argList));
+				}
+				else if (connectorVector.at(i) == "||") {
+					nextCommand = new ConnectOr(c0, new Command(argList));
+				}
+				else if (connectorVector.at(i) == ";") {
+					nextCommand = new ConnectSem(c0, new Command(argList));						
+				}
+				nextCommand->evaluate();
+			}
+			//ready for next command
+			noCommand = true;
+		}
+	}
+	
         return 0;
 }
