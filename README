@@ -18,24 +18,18 @@ A command that is followed by a connector(in this program connectors are ";", "&
 --------------------------
 III Other Functionality
 --------------------------
- - For single comments, if the user is wierd and wants to add a connector to a single comment, the program will accept it.
-
- - If the user does not input the right amount of characters for the connectors, it will still run fine.
-
-	Example of too little characters: echo hello | ls -a
-
-	Example of too many characters: echo Bonjour ;;; echo Taco's are the greatest
-
-  As Long as connectors contain the right symbol, then the commands will still execute.
-
 - This shell contains an exit command. When "exit" is typed into the command prompt, the terminal will close.
 
 - If "#" is input at any time within the command line, anything after "#" inlcuding itself will be read as a comment and be ignored.
 
 	Example of comment: echo Taco Bell; # ls; echo disneyland is overrated
-	This command line will only perform the task "echo Taco Bell"
+	This command line will only perform the task "echo Taco Bell".
 
 -------------------------
-IV Known bugs
+IV Known bugs/Limitations
 -------------------------
+- The program does not work if the user does not input the correct characters for the connectors.
 
+- A single command with a connector is not accepted.
+	
+	Example: echo chipotle is not authentic;
