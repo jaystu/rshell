@@ -1,1 +1,35 @@
 John Stuart and Jose Rodriguez's Assignment 2
+
+--------------------------
+I Introduction
+--------------------------
+This program is a basic shell that functions as a terminal. It will take in the commands that the user desires and executes them if they are legal syntax.
+
+--------------------------
+II Format of Commands
+--------------------------
+ The commands are accepted in the following format:
+A command that is followed by a connector(in this program connectors are ";", "&&", and "||"). There are no limits as to how many commands you want to execute. You just have to make sure that there is a connector between any two commands.
+
+	Example of a single command: ls -a
+	
+	Example of multiple commands: ls -a; echo hello || git status; echo Soviet Russia
+
+--------------------------
+III Other Functionality
+--------------------------
+- This shell contains an exit command. When "exit" is typed into the command prompt, the terminal will close.  
+
+- If "#" is input at any time within the command line, anything after "#" inlcuding itself will be read as a comment and be ignored.
+
+	Example of comment: echo Taco Bell; # ls; echo disneyland is overrated
+	This command line will only perform the task "echo Taco Bell".
+
+-------------------------
+IV Known bugs/Limitations
+-------------------------
+- The program does not work if the user does not input the correct characters for the connectors.
+
+- A single command with a connector is not accepted.
+	
+	Example: echo chipotle is not authentic;
