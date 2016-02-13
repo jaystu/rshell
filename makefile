@@ -1,10 +1,13 @@
+FLAGS = -g  -Wall -Werror -ansi -pedantic 
+COMPILE = g++
 
+SOURCES= src/main.cpp
 
 all: 
-	g++ -Wall -Werror -ansi -pedantic main.cpp test.cpp
-
-rshell:
-	g++ -Wall -Werror -ansi -pedantic main.cpp test.cpp
+	mkdir -p bin
+	$(COMPILE) $(FLAGS) $(SOURCES) -o bin/a.out
 
 clean: 
-	rm *o all
+	rm bin/a.out
+	rm -rf bin
+

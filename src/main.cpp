@@ -43,7 +43,7 @@ class Command : public Base {
 			}
 			//formatting the vector
 			vector<char *> a2;
-			for (int i = 0; i < args.size(); i++) {
+			for (unsigned int i = 0; i < args.size(); i++) {
 				a2.push_back(const_cast<char *>(args.at(i).c_str()));
 			}
 			a2.push_back('\0');
@@ -66,6 +66,9 @@ class Command : public Base {
 				//wait until child finishes or else bad things will happen
 				//waitpid(pid, &status, 0);
 				wait(&status);
+				if (wait(&status) != -1) {
+					perror("wait error");
+				}
 				if(WIFEXITED(status)){
     					if(WEXITSTATUS(status) == 0){
 					//program succeeded
@@ -79,6 +82,7 @@ class Command : public Base {
 				}
 				else{
 				//program exited abnormally
+				perror("abormal child exit");
 				return false;
 				}
 			}
@@ -121,14 +125,13 @@ class ConnectOr : public Connector {
 //function that splits string into vector of substrings
 vector<string> split(string s, const char* delim) {
 	//s is initial string
-	char charCom[s.size()+1];
+	char* charCom = new char[s.size() + 1];
 	//convert string to char array
-        strcpy(charCom,s.c_str());
-        charCom[s.size()+1] = '\0';
-        char * cutter;
+        strcpy(charCom, s.c_str());
+        charCom[s.size() + 1] = '\0';
+        char* cutter;
 	//parse string
         cutter = strtok(charCom, delim);
-        char* args[s.size()];
         vector<string> subStrings;
 	//creates substrings and puts them in vector
         while (cutter != NULL) {
@@ -149,7 +152,7 @@ int main(){
 		//get extra info for prompt (extra credit)
 		string login = getlogin();
         	char hostname[100];
-        	int temp = gethostname(hostname, 100);
+        	gethostname(hostname, 100);
         	cout << "[" << login << " " << hostname << "] $ ";
 		
 		getline(cin, initCommand);
@@ -182,17 +185,17 @@ int main(){
 				}
 			}
 			//splits statement with multiple commands into seperate commands
-			vector<string> mycommands = split(commandEntered, "||&&;");
+			vector<string> myCommands = split(commandEntered, "||&&;");
 			//run first command and get  boolean value
-			vector<string> firstCommand = split(mycommands.at(0), " ");
+			vector<string> firstCommand = split(myCommands.at(0), " ");
 			Base* first = new Command(firstCommand);
 			bool c0 = first->evaluate();
 
 			//instantiates connectors (filters subsequent commands based on successful first command run) 	
-			for (int i = 0; i < connectorVector.size(); i ++) {
+			for (unsigned int i = 0; i < connectorVector.size(); i ++) {
 				Base* nextCommand;
 				//formats single command to be passed into execvp() function
-				vector<string> argList = split(mycommands.at(i + 1), " ");
+				vector<string> argList = split(myCommands.at(i + 1), " ");
 				if (connectorVector.at(i) == "&&") {
 					nextCommand = new ConnectAnd(c0, new Command(argList));
 				}
