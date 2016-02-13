@@ -5,9 +5,9 @@ SOURCES= src/main.cpp
 
 all: 
 	mkdir -p bin
-	$(COMPILE) $(FLAGS) $(SOURCES) -o bin/a.out
+	$(COMPILE) $(FLAGS) $(SOURCES) -o bin/rshell
 
 clean: 
-	rm bin/a.out
+	rm bin/rshell
 	rm -rf bin
 
