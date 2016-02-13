@@ -33,3 +33,8 @@ IV Known bugs/Limitations
 - A single command with a connector is not accepted.
 	
 	Example: echo chipotle is not authentic;
+-------------------------
+V Requirements
+-------------------------
+- You need the boost library in order to run this program
+- Run this in commandline if you don't already have it "$ apt-get install libboost-dev"
