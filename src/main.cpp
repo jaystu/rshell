@@ -41,6 +41,10 @@ class Command : public Base {
 			if (args[0] == "exit") {
 				exit(0);
 			}
+			//custom test command
+			else if (args[0] == "test") {
+				//TODO
+			}
 			//formatting the vector
 			vector<char *> a2;
 			for (unsigned int i = 0; i < args.size(); i++) {
@@ -166,7 +170,21 @@ int main(){
 		}
 		while (noCommand == false) {
 			//if there exists comment, delete it
-			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));		
+			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));
+			//check for test brackets
+			int index1;
+			int index2;
+			if (commandEntered.find('[') != string::npos) {
+				index1 = commandEntered.find('[');
+				if (commandEntered.find(']') != string::npos) {
+					index2 = commandEntered.find(']');
+				}
+				else cout << "No closing bracket" << endl;
+				commandEntered.erase(index1,1);
+				commandEntered.erase(index2 - 1,1);
+				commandEntered.insert(0, "test ");
+			}					
+			cout << commandEntered;
 			//fills vector of connectors so we can refer to them when instantiating connector classes
 			vector<string> connectorVector;
 			for(unsigned int i = 0; i < commandEntered.length(); i++) {
