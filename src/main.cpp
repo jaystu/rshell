@@ -34,7 +34,11 @@ class Test {
 	private:
 		int flag;
         public:
+		//true if file found and/or matches filetype specified
+		//false if file not found or filetype does not match what was specified 
 		bool didFind;
+
+		//formats argument so that only file name is left
                 Test(vector<string> testArgs) {
 			if (testArgs[0] == "-e") {
 				testArgs.erase(testArgs.begin());
@@ -56,10 +60,11 @@ class Test {
                         a2.push_back('\0');
                         char** array = &a2[0];
 			struct stat fileStat;
-    			if(stat(const_cast<char *>(array[0]) ,&fileStat) < 0) {    
+			//tests if file was located
+    			if(stat(const_cast<char *>(array[0]) ,&fileStat) < 0) {
         			didFind = false;
 			}
-			else {
+			else {//if file located and filetype specified then test to see if filetype matches
 				didFind = true;
 				if (flag == 2) {
                          	       (S_ISREG(fileStat.st_mode)) ? didFind = true : didFind = false;
@@ -68,10 +73,6 @@ class Test {
                                 	(S_ISDIR(fileStat.st_mode)) ? didFind = true : didFind = false;
                         	}
 			}
-
-                        for (unsigned int i = 0; i < testArgs.size(); i++) {
-                                cout << testArgs[i] << " ";
-                        }
                         cout << endl;
                 }
 };
@@ -90,11 +91,18 @@ class Command : public Base {
 			//custom test command
 			else if (args[0] == "test") {
 				args.erase(args.begin());
+				//if no file passed then exit()
+				if (args.empty() || (args.size() == 1 && (args[0] == "-e" || args[0] == "-f" || args[0] == "-d"))) {
+					cout << "no file passed, exiting..." << endl;
+					exit(0);
+				}
 				Test* testCommand = new Test(args);
+				//if file was found
 				if (testCommand->didFind) {
 					cout << "true" << endl;
 					return true;
 				}
+				//either file wasn't found or wasn't file type specified by flag
 				else {
 					cout << "false" << endl;
 					return false;
