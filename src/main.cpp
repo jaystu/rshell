@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <pwd.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <boost/algorithm/string.hpp>
 using namespace std;
 using namespace boost::algorithm;
@@ -29,6 +30,51 @@ class Connector : public Base {
                 bool firstRun;
                 Base* rt;
 };
+class Test {
+	private:
+		int flag;
+        public:
+		bool didFind;
+                Test(vector<string> testArgs) {
+			if (testArgs[0] == "-e") {
+				testArgs.erase(testArgs.begin());
+				flag = 1;
+			}
+			else if (testArgs[0] == "-f") {
+				testArgs.erase(testArgs.begin());
+				flag = 2;
+			}
+			else if (testArgs[0] == "-d") {
+				testArgs.erase(testArgs.begin());
+				flag = 3;
+			}
+			else {
+				flag = 1;
+			}
+			vector<char *> a2;
+                       	a2.push_back(const_cast<char *>(testArgs[0].c_str()));
+                        a2.push_back('\0');
+                        char** array = &a2[0];
+			struct stat fileStat;
+    			if(stat(const_cast<char *>(array[0]) ,&fileStat) < 0) {    
+        			didFind = false;
+			}
+			else {
+				didFind = true;
+				if (flag == 2) {
+                         	       (S_ISREG(fileStat.st_mode)) ? didFind = true : didFind = false;
+                        	}
+                        	else if (flag == 3) {
+                                	(S_ISDIR(fileStat.st_mode)) ? didFind = true : didFind = false;
+                        	}
+			}
+
+                        for (unsigned int i = 0; i < testArgs.size(); i++) {
+                                cout << testArgs[i] << " ";
+                        }
+                        cout << endl;
+                }
+};
 //Command will serve as our leaf node in our composite pattern design
 class Command : public Base {
         private:
@@ -43,54 +89,66 @@ class Command : public Base {
 			}
 			//custom test command
 			else if (args[0] == "test") {
-				//TODO
-			}
-			//formatting the vector
-			vector<char *> a2;
-			for (unsigned int i = 0; i < args.size(); i++) {
-				a2.push_back(const_cast<char *>(args.at(i).c_str()));
-			}
-			a2.push_back('\0');
-			char** array = &a2[0];
-
-			//fork so multiple processes can happen at once
-			int status;
-			pid_t pid = fork();
-			if (pid < 0) {
-				perror("fork failed");
-				exit(1);
-			}
-			else if (pid == 0) {
-				//can now pass into execvp() with some final touches to the formatting
-				execvp(const_cast<char *>(array[0]), array);
-				//if reaches this part then error
-				exit(127);
-			}
-			else if (pid > 0) {
-				//wait until child finishes or else bad things will happen
-				//waitpid(pid, &status, 0);
-				wait(&status);
-				if (wait(&status) != -1) {
-					perror("wait error");
-				}
-				if(WIFEXITED(status)){
-    					if(WEXITSTATUS(status) == 0){
-					//program succeeded
+				args.erase(args.begin());
+				Test* testCommand = new Test(args);
+				if (testCommand->didFind) {
+					cout << "true" << endl;
 					return true;
-					}
-					else {
-					//program failed but exited normally
-					return false;
-						
-					}
 				}
-				else{
-				//program exited abnormally
-				perror("abormal child exit");
-				return false;
+				else {
+					cout << "false" << endl;
+					return false;
 				}
 			}
+			else {
+				//formatting the vector
+				vector<char *> a2;
+				for (unsigned int i = 0; i < args.size(); i++) {
+					a2.push_back(const_cast<char *>(args.at(i).c_str()));
+				}
+				a2.push_back('\0');
+				char** array = &a2[0];
+
+				//fork so multiple processes can happen at once
+				int status;
+				pid_t pid = fork();
+				if (pid < 0) {
+					perror("fork failed");
+					exit(1);
+				}
+				else if (pid == 0) {
+					//can now pass into execvp() with some final touches to the formatting
+					execvp(const_cast<char *>(array[0]), array);
+					//if reaches this part then error
+					exit(127);
+				}
+				else if (pid > 0) {
+					//wait until child finishes or else bad things will happen
+					//waitpid(pid, &status, 0);
+					wait(&status);
+					if (wait(&status) != -1) {
+						perror("wait error");
+					}
+					if(WIFEXITED(status)){
+    						if(WEXITSTATUS(status) == 0){
+						//program succeeded
+						return true;
+						}
+						else {
+						//program failed but exited normally
+						return false;
+						
+						}
+					}
+					else{
+					//program exited abnormally
+					perror("abormal child exit");
+					return false;
+					}
+				}
 			
+				return false;
+			}
 			return false;			
 		} 
 };
@@ -117,7 +175,8 @@ class ConnectOr : public Connector {
 			}
 			return false;
         	}
-};class ConnectSem : public Connector {
+};
+class ConnectSem : public Connector {
         public:
                 ConnectSem(bool f, Base* r) {firstRun = f; rt = r;}
          	~ConnectSem();
@@ -184,7 +243,6 @@ int main(){
 				commandEntered.erase(index2 - 1,1);
 				commandEntered.insert(0, "test ");
 			}					
-			cout << commandEntered;
 			//fills vector of connectors so we can refer to them when instantiating connector classes
 			vector<string> connectorVector;
 			for(unsigned int i = 0; i < commandEntered.length(); i++) {
