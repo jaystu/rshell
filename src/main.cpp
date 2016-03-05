@@ -100,12 +100,12 @@ class Command : public Base {
 				Test* testCommand = new Test(args);
 				//if file was found
 				if (testCommand->didFind) {
-					cout << "true" << endl;
+					cout << "(true)" << endl;
 					return true;
 				}
 				//either file wasn't found or wasn't file type specified by flag
 				else {
-					cout << "false" << endl;
+					cout << "(false)" << endl;
 					return false;
 				}
 			}
@@ -214,55 +214,69 @@ vector<string> split(string s, const char* delim) {
         }
 	return subStrings;
 }
-string trimParens(string commandEntered) {
+unsigned getEndParenPos(string commandEntered, unsigned pos) {
 	stack<char> stack;
-        cout << "evaluating: " << commandEntered << endl << endl;
-
+	unsigned m = pos;
+	stack.push('f');
+	m++;
+	for(; m < commandEntered.size(); m++) {
+		if(commandEntered.at(m) == '(') {
+			stack.push('(');
+		}
+		else if(commandEntered.at(m) == ')') {
+			char openParen = stack.top();
+			stack.pop();
+			if (stack.empty() && openParen == 'f') {
+				return m;		
+			}
+		}
+	}
+	return m;
+}
+string trimParens(string commandEntered) {
+        stack<char> stack;
         //if single command but encapsulated with parenthesis erase parenthesis
         bool stillEncapsulated = false;
-	do {
-                                stack.push('f');//push the first open parens to stack
-                                cout << "in loop" << endl;
-                                for(unsigned m = 1; m < commandEntered.size(); m++) {
-                                        if(commandEntered.at(m) == '(') {
-                                                stack.push('(');
-                                        }
-                                        else if(commandEntered.at(m) == ')') {
-                                                char openParen = stack.top();
-                                                stack.pop();
-                                                if (stack.empty() && m == commandEntered.size() - 1 && openParen == 'f') {
-                                                        commandEntered.erase(0, 1);
-                                                        commandEntered.erase(commandEntered.size() - 1);
-                                                        stillEncapsulated = false;
-                                                        if (commandEntered.find('(') != 0) {
-                                                                cout << "no more parens, complete " << endl << endl;
-                                                                break;
-                                                        }
-                                                        else {
-                                                                stack.push('f');
-                                                                for(unsigned a = 1; a < commandEntered.size(); a++) {
-                                                                        cout << "In third loop" << endl;
-                                                                        if(commandEntered.at(a) == '(') {
-                                                                                stack.push('(');
-                                                                        }
-                                                                        else if(commandEntered.at(a) == ')') {
-                                                                                openParen = stack.top();
-                                                                                stack.pop();
-                                                                                if (stack.empty() && a == commandEntered.size() - 1 && openParen == 'f') {
-                                                                                        cout << "still encapsulated " << endl << endl;
-                                                                                        stillEncapsulated = true;
-                                                                                        break;
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
-                                                }
-                                        }
-                                }
-                        trim(commandEntered);
-                        cout << "deleted parens, new group: " << commandEntered << endl;
-                        } while (stillEncapsulated == true);
-	return commandEntered;
+        do {
+        	trim(commandEntered);
+        	if (commandEntered.find('(') != 0) {
+        		return commandEntered; 
+                }
+                else if (getEndParenPos(commandEntered, 0) == commandEntered.size() - 1) { 
+			commandEntered.erase(0, 1);
+			commandEntered.erase(commandEntered.size() - 1);
+			if (getEndParenPos(commandEntered, 0) == commandEntered.size() - 1) {
+				stillEncapsulated = true;
+			}
+			else {
+				return commandEntered;
+			}
+		}
+		else {
+			return commandEntered;
+		}
+	} while (stillEncapsulated == true); return commandEntered;
+}
+void checkParens(string commandEntered) {	
+	stack<char> myStack;
+	for(unsigned m = 0; m < commandEntered.size(); m++) {
+		if(commandEntered.at(m) == '(') {
+			myStack.push('(');
+		}
+		else if(commandEntered.at(m) == ')') {
+			if(!myStack.empty()) {
+				myStack.pop();
+			}
+			else{
+				cout<<"Error: parenthesis mismatch. Missing \'('. " << endl;
+				exit(0);
+			}
+		}
+	}
+	if(!myStack.empty()) {
+        	cout<<"Error: paranthesis mismatch. Missing \')'." << endl;
+        	exit(0);
+        }
 }
 class Group : public Base {
         private:
@@ -278,8 +292,6 @@ class Group : public Base {
 			
 			//if single command but encapsulated with parenthesis erase parenthesis
 			commandEntered = trimParens(commandEntered);
-			cout << "out of loop" << endl << endl;
-			cout << "command entered after loop" << commandEntered << endl;
 			//if somehow empty command gets passed in
 			if (commandEntered == "" ) {
 				return true;
@@ -291,136 +303,108 @@ class Group : public Base {
 					hasNestedGroup = true;
                                 }
 			}
-			Base* group1;
-			Base* group2;
-			Base* nextGroup;
-			int parenIndex1;
-			int parenIndex2;
-			bool foundConnector;
 			
-			//find largest encapsulated group and split into 2 smaller groups and recursively evaluate each
-			stack<char> stack;
-			parenIndex1 = commandEntered.find('(');
-			stack.push('f');
-			for(unsigned m = parenIndex1 + 1; m < commandEntered.size(); m++) {
-                                if(commandEntered.at(m) == '(') {
-					stack.push('(');
-                                }
-                                else if(commandEntered.at(m) == ')') {//found encapsulated group
-					char openParen = stack.top();
-					stack.pop();
-					parenIndex2 = m;
-					vector<char> k;
-					if (stack.empty() && openParen == 'f') 
-					{
-						cout << "found an encapsulated group" << endl << endl;
-						for (int r = parenIndex1; r <= parenIndex2; r++) {
-							k.push_back(commandEntered[r]);
-						}
-					
-						//group that will split from base group
-						string s(k.begin(), k.end() );
-						cout << "s trying to be extracted : " << s << endl << endl;
-						foundConnector = false;
-						//find connector that connects group to other group
-						for (unsigned w = 1; w <= 3; w++) {
-							if (commandEntered[commandEntered.find(s) - w] == '&') {
-								if (commandEntered[commandEntered.find(s) - w - 1] == '&') {
-									s.insert(0, "&& ");
-									foundConnector = true;
-									break;
-								}
-							}
-							else if (commandEntered[commandEntered.find(s) - w] == '|') {
-								if (commandEntered[commandEntered.find(s) - w - 1] == '|') {
-									foundConnector = true;
-									s.insert(0, "|| ");
-									break;
-								}
-							}
-							else if (commandEntered[commandEntered.find(s) - w] == ';') {
-								foundConnector = true;
-								s.insert(0, "; ");
-								break;
-							}
-						}
-						if (foundConnector == false) {
-							for (unsigned w = 1; w <= 3; w++) {
-								if (commandEntered[commandEntered.find(s) + s.size() + w] == '&') {
-									if (commandEntered[commandEntered.find(s) + s.size() + w + 1] == '&') {
-										s.append(" &&");
-										foundConnector = true;
-										break;
-									}
-								}
-								else if (commandEntered[commandEntered.find(s) + s.size() + w] == '|') {
-									if (commandEntered[commandEntered.find(s) + s.size() + w + 1] == '|') {
-										foundConnector = true;
-										s.append(" ||");
-										break;
-									}
-								}
-								else if (commandEntered[commandEntered.find(s) + s.size() + w] == ';') {
-									foundConnector = true;
-									s.append(" ;");
-									break;
-								}
-							}
-
-						}
-						//format base group so that 2 distinct groups are left
-						commandEntered.erase(commandEntered.find(s), s.size());
-						cout << "command extracted: " << s << endl << endl;
-						trim(commandEntered);
-						cout << "what is left of original: " << commandEntered << endl << endl;
-						string t = commandEntered;
-
-						//evaluate groups based on connector
-						if (s.find(") &&") != string::npos) {
-							s.erase(s.find(") &&") + 1, 3);
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectAnd(group1->evaluate(), group2);
-						} 
-						else if (s.find(") ||") != string::npos) {
-							s.erase(s.find(") ||") + 1, 3);
-							cout << "after split : " << s << endl << endl;
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectOr(group1->evaluate(), group2);
-						}
-						else if (s.find(") ;") != string::npos) {
-							s.erase(s.find(") ;") + 1, 2);
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectSem(group1->evaluate(), group2);
-						}
-						else if (s.find("&& (") != string::npos) {
-							s.erase(s.find("&& ("), 2);
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectAnd(group2->evaluate(), group1);
-						}
-						else if (s.find("|| (") != string::npos) {
-							s.erase(s.find("|| ("), 2);
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectOr(group2->evaluate(), group1);
-						}
-						else if (s.find("; (") != string::npos) {
-							s.erase(s.find("; ("), 1);
-							group1 = new Group(s);
-							group2 = new Group(t);
-							nextGroup = new ConnectSem(group2->evaluate(), group1);
-						}
-						if (nextGroup->evaluate()) {
-							return true;
-						}
-						else return false;
+			if (hasNestedGroup) {
+				//vector to hold connectors between groups
+				vector<string> connectorVector;
+				//vector to hold all the groups
+				vector<string> myGroups;
+				
+				unsigned startOfGroup;
+				unsigned endOfGroup;
+				string groupToPush;
+				for(unsigned m = 0; m < commandEntered.size();) {
+					if(commandEntered.at(m) == '(') {
+						startOfGroup = m;
+						endOfGroup = getEndParenPos(commandEntered, m);
+						groupToPush = commandEntered.substr(startOfGroup, endOfGroup - startOfGroup + 1);
+						myGroups.push_back(groupToPush);
+						m += endOfGroup - startOfGroup + 1;
 					}
-                                }
-                        }
-			if (!hasNestedGroup) {
+					else if (commandEntered[m] == '&') {
+						if (commandEntered[m + 1] == '&') {
+							connectorVector.push_back("&&");
+						}
+						m += 2;
+					}
+					else if (commandEntered[m] == '|') {
+						if (commandEntered[m + 1] == '|') {
+							connectorVector.push_back("||");
+						}
+						m += 2;
+					}
+					else if (commandEntered[m] == ';') {
+						connectorVector.push_back(";");
+						m++;
+					}
+					else if (commandEntered[m] == ' ') {//skip a space
+						m++;
+					}
+					else {
+						startOfGroup = m;
+						unsigned a;
+						unsigned o;
+						unsigned s;
+						//next group found if connector found
+						a = commandEntered.find("&&", m);
+						o = commandEntered.find("||", m);
+						s = commandEntered.find(";", m);
+						if (commandEntered.find("&&", m) == string::npos && commandEntered.find("||", m) == string::npos && commandEntered.find(";", m) == string::npos) {
+							//no more groups found
+							endOfGroup = commandEntered.size();
+						}
+						else {//new group found
+							if (a < o && a < s) {
+								endOfGroup = a - 1;
+							}
+							else if (o < a && o < s) {
+								endOfGroup = o - 1;
+							}	
+							else if (s < a && s < o) {
+								endOfGroup = s - 1;
+							}
+						}
+						groupToPush = commandEntered.substr(startOfGroup, endOfGroup - startOfGroup);
+                                                m += endOfGroup - startOfGroup;
+                                                myGroups.push_back(groupToPush);
+					}
+				}
+				
+				/*cout << "groups in myGroups: " << endl;
+				cout << "------------------" << endl;
+				for (unsigned i = 0; i < myGroups.size(); i++) {
+					cout << myGroups.at(i) << endl;
+				}
+				cout << "------------------" << endl;
+
+				cout << "connectors in connectorVector: " << endl;
+				cout << "------------------" << endl;
+				for (unsigned i = 0; i < connectorVector.size(); i++) {
+					cout << connectorVector.at(i) << endl;
+				}
+				cout << "------------------" << endl;*/
+				
+				Base* first = new Group(myGroups[0]);
+				bool c0 = first->evaluate();
+
+				for (unsigned int i = 0; i < connectorVector.size(); i ++) {
+					Base* nextGroup;
+
+					if (connectorVector.at(i) == "&&") {
+						nextGroup = new ConnectAnd(c0, new Group(myGroups[i + 1]));
+					}
+					else if (connectorVector.at(i) == "||") {
+						nextGroup = new ConnectOr(c0, new Group(myGroups[i + 1]));
+					}
+					else if (connectorVector.at(i) == ";") {
+						nextGroup = new ConnectSem(c0, new Group(myGroups[i + 1]));
+					}
+					return nextGroup->evaluate();
+				}
+
+			}
+			
+			else if (!hasNestedGroup) {
 				//check for test brackets
 				int index1;
 				int index2;
@@ -514,52 +498,15 @@ int main(){
 			noCommand = false;	
 		}
 		while (noCommand == false) {
-			string temp;
 			//get comment out	
 			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));
-			stack<char> myStack;
 			
-			//make sure parenthesis correct
-			int parenCount = 0;
-			trim(commandEntered);	
-			commandEntered.insert(0,"(");
-			commandEntered.append(")");
-			for(unsigned m = 1; m < commandEntered.size() - 1; m++) {
-        			if(commandEntered.at(m) == '(') {
-					parenCount++;
-                			myStack.push('(');
-        			}
-       				else if(commandEntered.at(m) == ')') {
- 		               		if(!myStack.empty()) {
-               		 			myStack.pop();
-					}
- 	               			else{
-                        			cout<<"Error: parenthesis mismatch. Missing \'('. " << endl;
-                        			exit(0);
-					}
-        			}
-				else if (myStack.empty() && (commandEntered.at(m) == '&' || commandEntered.at(m) == '|' || commandEntered.at(m) == ';')) {
-					commandEntered.insert(m - 1, ")");
-					commandEntered.insert(m + 4, "(");
-					m = m + 4;
-				}
-			}
-			cout << "With added Parenthesis: " << commandEntered << endl << endl << endl;
-			//exit if parenthisis incorrect
-			if(!myStack.empty()) {
-        			cout<<"Error: paranthesis mismatch. Missing \')'." << endl;
-        			exit(0);
-			}
-
-			//run command entered into command prompt
-			Base* wholeCommand = new Group(commandEntered);
-			(wholeCommand->evaluate()) ? cout << "group true" : cout << "group false";
-			cout << endl;
-
+			Base* entireLine = new Group(commandEntered);
+			entireLine->evaluate();
+	
 			//ready for next command
 			noCommand = true;
 		}
-	}
-	
+	}	
         return 0;
 }
