@@ -214,10 +214,11 @@ vector<string> split(string s, const char* delim) {
         }
 	return subStrings;
 }
+//function that takes in position of opening paren and spits out pos of its corresponding closing paren
 unsigned getEndParenPos(string commandEntered, unsigned pos) {
 	stack<char> stack;
 	unsigned m = pos;
-	stack.push('f');
+	stack.push('f');//'f' stands for the first opening paren
 	m++;
 	for(; m < commandEntered.size(); m++) {
 		if(commandEntered.at(m) == '(') {
@@ -226,23 +227,23 @@ unsigned getEndParenPos(string commandEntered, unsigned pos) {
 		else if(commandEntered.at(m) == ')') {
 			char openParen = stack.top();
 			stack.pop();
-			if (stack.empty() && openParen == 'f') {
+			if (stack.empty() && openParen == 'f') {//found closing paren that matches first opening paren
 				return m;		
 			}
 		}
 	}
 	return m;
 }
+//function that deletes unneeded parenthesis on both sides of string example "(echo 1 && echo 2)" does not need parenthesis
 string trimParens(string commandEntered) {
         stack<char> stack;
-        //if single command but encapsulated with parenthesis erase parenthesis
         bool stillEncapsulated = false;
         do {
         	trim(commandEntered);
-        	if (commandEntered.find('(') != 0) {
+        	if (commandEntered.find('(') != 0) {//no open paren in 0 position so no need to go further
         		return commandEntered; 
                 }
-                else if (getEndParenPos(commandEntered, 0) == commandEntered.size() - 1) { 
+                else if (getEndParenPos(commandEntered, 0) == commandEntered.size() - 1) {//if there is open paren and its closing paren is the very last char 
 			commandEntered.erase(0, 1);
 			commandEntered.erase(commandEntered.size() - 1);
 			if (getEndParenPos(commandEntered, 0) == commandEntered.size() - 1) {
@@ -257,6 +258,7 @@ string trimParens(string commandEntered) {
 		}
 	} while (stillEncapsulated == true); return commandEntered;
 }
+//function to make sure correct amount and order of parenthesis passed into command line
 void checkParens(string commandEntered) {	
 	stack<char> myStack;
 	for(unsigned m = 0; m < commandEntered.size(); m++) {
@@ -287,6 +289,7 @@ class Group : public Base {
                 Group(string commandEntered) {
                         this->commandEntered = commandEntered;
                 }
+		//if single group(doesn't have nested groups) then evaluates normally, else evaluates recursively
                 bool evaluate() {
 			trim(commandEntered);
 			
@@ -314,14 +317,14 @@ class Group : public Base {
 				unsigned endOfGroup;
 				string groupToPush;
 				for(unsigned m = 0; m < commandEntered.size();) {
-					if(commandEntered.at(m) == '(') {
+					if(commandEntered.at(m) == '(') {//whatever is inside parenthesis is considered group
 						startOfGroup = m;
 						endOfGroup = getEndParenPos(commandEntered, m);
-						groupToPush = commandEntered.substr(startOfGroup, endOfGroup - startOfGroup + 1);
+						groupToPush = commandEntered.substr(startOfGroup, endOfGroup - startOfGroup + 1);//extract group
 						myGroups.push_back(groupToPush);
-						m += endOfGroup - startOfGroup + 1;
+						m += endOfGroup - startOfGroup + 1;//skip ahead so don't read over characters that have already been read
 					}
-					else if (commandEntered[m] == '&') {
+					else if (commandEntered[m] == '&') {//push connectors and then skip over them
 						if (commandEntered[m + 1] == '&') {
 							connectorVector.push_back("&&");
 						}
