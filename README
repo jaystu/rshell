@@ -15,6 +15,29 @@ A command that is followed by a connector(in this program connectors are ";", "&
 	
 	Example of multiple commands: ls -a; echo hello || git status; echo Soviet Russia
 
+This shell also has several test commands that can be written in two different ways:
+	test -e /file/path
+	or
+	[ -e /test/file/path ]
+
+	-e is the flag to be run, this program can run the following flags:
+
+	-e 	checks if the file/directory exists
+	-f	checks if file/directory exists and is a regular file
+	-d 	checks if the file/directory exists and is a directory
+	
+	After a flag is run, the program will print "(True)" or "(False)" in the terminal.
+
+	Note: if the user does not specify a flag, then the test by default will have the flag -e.
+
+These tests can be added in place of a command. 
+	Example of test added: [ -e /test/file/path ] && echo this works
+
+Parenthesis can be placed to determine precedence of the connectors.
+ 
+	Example: echo one || ( echo two && echo three)
+	This command line will only output echo one.
+
 --------------------------
 III Other Functionality
 --------------------------
@@ -25,6 +48,8 @@ III Other Functionality
 	Example of comment: echo Taco Bell; # ls; echo disneyland is overrated
 	This command line will only perform the task "echo Taco Bell".
 
+
+
 -------------------------
 IV Known bugs/Limitations
 -------------------------
@@ -33,6 +58,16 @@ IV Known bugs/Limitations
 - A single command with a connector is not accepted.
 	
 	Example: echo chipotle is not authentic;
+
+- Paranthesis need to be formated correctly. If not, the program will close.
+
+	Example: (command1)) || (command2 && command3 )(
+	
+	Example2: command1( (
+	
+	These command lines will not work since the parenthesis is not in proper format.
+	
+
 -------------------------
 V Requirements
 -------------------------
