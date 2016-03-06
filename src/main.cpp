@@ -79,7 +79,6 @@ class Test {
 					cout << "PROBLEMMMMMM" << endl;
 				}
 			}
-                        cout << endl;
                 }
 };
 //Command will serve as our leaf node in our composite pattern design
