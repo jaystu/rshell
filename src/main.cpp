@@ -66,13 +66,18 @@ class Test {
         			didFind = false;
 			}
 			else {//if file located and filetype specified then test to see if filetype matches
-				didFind = true;
-				if (flag == 2) {
+				if (flag == 1) {
+					didFind = true;
+				}
+				else if(flag == 2) {
                          	       (S_ISREG(fileStat.st_mode)) ? didFind = true : didFind = false;
                         	}
                         	else if (flag == 3) {
                                 	(S_ISDIR(fileStat.st_mode)) ? didFind = true : didFind = false;
                         	}
+				else {
+					cout << "PROBLEMMMMMM" << endl;
+				}
 			}
                         cout << endl;
                 }
@@ -200,7 +205,7 @@ vector<string> split(string s, const char* delim) {
 	char* charCom = new char[s.size() + 1];
 	//convert string to char array
         strcpy(charCom, s.c_str());
-        charCom[s.size() + 1] = '\0';
+        charCom[s.size()] = '\0';
         char* cutter;
 	//parse string
         cutter = strtok(charCom, delim);
@@ -296,7 +301,7 @@ class Group : public Base {
 			//if single command but encapsulated with parenthesis erase parenthesis
 			commandEntered = trimParens(commandEntered);
 			//if somehow empty command gets passed in
-			if (commandEntered == "" ) {
+			if (commandEntered == "") {
 				return true;
 			}
 			//check if nested groups present
@@ -373,7 +378,7 @@ class Group : public Base {
 					}
 				}
 				
-				/*cout << "groups in myGroups: " << endl;
+			/*	cout << "groups in myGroups: " << endl;
 				cout << "------------------" << endl;
 				for (unsigned i = 0; i < myGroups.size(); i++) {
 					cout << myGroups.at(i) << endl;
@@ -386,24 +391,29 @@ class Group : public Base {
 					cout << connectorVector.at(i) << endl;
 				}
 				cout << "------------------" << endl;*/
-				
-				Base* first = new Group(myGroups[0]);
-				bool c0 = first->evaluate();
-
-				for (unsigned int i = 0; i < connectorVector.size(); i ++) {
+				Base* firstGroup = new Group(myGroups[0]);
+				bool g0 = firstGroup->evaluate();
+				trueTracker.push_back(g0);
+		
+				for (unsigned w = 0; w < connectorVector.size(); w++) {
 					Base* nextGroup;
-
-					if (connectorVector.at(i) == "&&") {
-						nextGroup = new ConnectAnd(c0, new Group(myGroups[i + 1]));
+					if (connectorVector.at(w) == "&&") {
+						nextGroup = new ConnectAnd(g0, new Group(myGroups[w + 1]));
 					}
-					else if (connectorVector.at(i) == "||") {
-						nextGroup = new ConnectOr(c0, new Group(myGroups[i + 1]));
+					else if (connectorVector.at(w) == "||") {
+						nextGroup = new ConnectOr(g0, new Group(myGroups[w + 1]));
 					}
-					else if (connectorVector.at(i) == ";") {
-						nextGroup = new ConnectSem(c0, new Group(myGroups[i + 1]));
+					else if (connectorVector.at(w) == ";") {
+						nextGroup = new ConnectSem(g0, new Group(myGroups[w + 1]));
 					}
-					return nextGroup->evaluate();
+					bool gNext = nextGroup->evaluate();
+                                        trueTracker.push_back(gNext);
 				}
+				for (unsigned int t = 0; t < trueTracker.size(); t++) {
+                                        if (trueTracker[t] == true) {
+                                                return true;
+                                        }
+                                }
 
 			}
 			
@@ -443,16 +453,14 @@ class Group : public Base {
 				}
 				//splits statement with multiple commands into seperate commands
 				vector<string> myCommands = split(commandEntered, "||&&;");
-
 				vector<string> firstCommand = split(myCommands.at(0), " ");
 				Base* first = new Command(firstCommand);
 				bool c0 = first->evaluate();
 				trueTracker.push_back(c0);
 
 				//instantiates connectors (filters subsequent commands based on successful first command run)
-				for (unsigned int i = 0; i < connectorVector.size(); i ++) {
+				for (unsigned i = 0; i < connectorVector.size(); i ++) {
 					Base* nextCommand;
-
 					vector<string> argList = split(myCommands.at(i + 1), " ");
 					if (connectorVector.at(i) == "&&") {
 						nextCommand = new ConnectAnd(c0, new Command(argList));
@@ -466,6 +474,20 @@ class Group : public Base {
 					bool cNext = nextCommand->evaluate();
 					trueTracker.push_back(cNext);
 				}
+
+				/*cout << "groups in myCommands: " << endl;
+                                cout << "------------------" << endl;
+                                for (unsigned i = 0; i < myCommands.size(); i++) {
+                                        cout << myCommands.at(i) << endl;
+                                }
+                                cout << "------------------" << endl;
+
+                                cout << "connectors in connectorVector: " << endl;
+                                cout << "------------------" << endl;
+                                for (unsigned i = 0; i < connectorVector.size(); i++) {
+                                        cout << connectorVector.at(i) << endl;
+                                }
+                                cout << "------------------" << endl;*/
 				//if at least one command is true then whole group considered true
 				for (unsigned int t = 0; t < trueTracker.size(); t++) {
 					if (trueTracker[t] == true) {
@@ -504,6 +526,7 @@ int main(){
 			//get comment out	
 			string commandEntered = initCommand.substr(0, initCommand.find('#', 1));
 			
+			checkParens(commandEntered);				
 			Base* entireLine = new Group(commandEntered);
 			entireLine->evaluate();
 	
