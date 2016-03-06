@@ -15,7 +15,7 @@ A command that is followed by a connector(in this program connectors are ";", "&
 	
 	Example of multiple commands: ls -a; echo hello || git status; echo Soviet Russia
 
-This shell also has several test commands that can be written in two different ways:
+This shell also supports test commands that can be written in two different ways:
 	test -e /file/path
 	or
 	[ -e /test/file/path ]
@@ -48,18 +48,27 @@ III Other Functionality
 	Example of comment: echo Taco Bell; # ls; echo disneyland is overrated
 	This command line will only perform the task "echo Taco Bell".
 
+- This program can take in as many parenthesis as long as they are in proper format. 
+	
+	Example: "(((((echo 1)))))"
+
+	Example2: "((echo 1 && echo 2))"
+
+This program can take in nested parenthesis.
+
+	Example "((echo 1 && (echo 2 || echo 3 ; echo 3 ; echo 4) && echo 5) && echo 6) && echo 7"
 
 
 -------------------------
 IV Known bugs/Limitations
 -------------------------
-- The program does not work if the user does not input the correct characters for the connectors.
+- The program does not work if the user does not input the correct characters for the connectors (ex. "&" instead of "&&").
 
 - A single command with a connector is not accepted.
 	
 	Example: echo chipotle is not authentic;
 
-- Paranthesis need to be formated correctly. If not, the program will close.
+- If inputting parenthesis, they need to be formatted correctly (in correct order and there needs to be a correct number of them).
 
 	Example: (command1)) || (command2 && command3 )(
 	
@@ -67,7 +76,11 @@ IV Known bugs/Limitations
 	
 	These command lines will not work since the parenthesis is not in proper format.
 	
+- There must be whitespaces seperating parenthesis and connectors.
 
+	Example: "(echo 1)&&(echo2)" <-- wrong! "(echo 1) && (echo 2)" <-- correct!
+	
+	Example2: "(echo 1);(echo2)" <-- wrong! "(echo 1) ; (echo 2)" <-- correct!
 -------------------------
 V Requirements
 -------------------------
